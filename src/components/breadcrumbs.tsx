@@ -8,14 +8,9 @@ const pathLabels: Record<string, string> = {
   "/x": "X",
   "/x-content": "Tweets",
   "/x-analytics": "X Analytics",
-  "/watchlist-radar": "Trend Radar",
   "/youtube": "YouTube",
-  "/longform": "Longform",
-  "/articles": "Articles",
-  "/client-pulse": "Client Pulse",
   "/agents": "Agents",
   "/ideas": "Ideas",
-  "/garden": "Garden",
   "/tasks": "Tasks",
 };
 

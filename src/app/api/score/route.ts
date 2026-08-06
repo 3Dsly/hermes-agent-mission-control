@@ -2,10 +2,9 @@
  * Momentum Score — Weekly Performance Score (last 7 days)
  *
  * Components:
- *   X Performance   35%  — Weekly tweet views + engagement
- *   YouTube Growth  20%  — New subscribers this week
- *   Trading         20%  — Win rate (not P&L — skill > luck)
- *   Content Output  25%  — Posts made + quality this week
+ *   X Performance   40%  — Weekly tweet views + engagement
+ *   YouTube Growth  25%  — New subscribers this week
+ *   Content Output  35%  — Posts made + quality this week
  */
 
 import { NextResponse } from "next/server";
@@ -18,7 +17,7 @@ export async function GET() {
   const now = Date.now();
   const weekAgo = new Date(now - 7 * 86_400_000);
 
-  // ── 1. X Performance (35%) ─────────────────────────────────
+  // ── 1. X Performance (40%) ─────────────────────────────────
   let weeklyViews    = parseInt(process.env.X_WEEKLY_VIEWS || "0");
   let weeklyPosts    = 0;
   let bestTweetViews = parseInt(process.env.X_BEST_TWEET_VIEWS || "0");
@@ -37,7 +36,7 @@ export async function GET() {
   } else {
     try {
       weeklyPosts = await prisma.draft.count({ where: { postedAt: { gte: weekAgo } } });
-    } catch { weeklyPosts = parseInt(process.env.WEEKLY_POSTS || "3"); }
+    } catch { weeklyPosts = 0; } // honest: no fake substitute when the DB read fails
   }
 
   const xScore = weeklyViews >= 1_000_000 ? 100
@@ -49,7 +48,7 @@ export async function GET() {
     : weeklyViews >= 1_000    ? 25
     : 10;
 
-  // ── 2. YouTube Growth (20%) ────────────────────────────────
+  // ── 2. YouTube Growth (25%) ────────────────────────────────
   const currentYtSubs = parseInt(process.env.YT_SUBSCRIBERS || "0");
   let ytGrowth    = parseInt(process.env.YT_WEEK_NEW_SUBS || "0");
   let ytSubsWeekAgo = ytGrowth > 0 ? currentYtSubs - ytGrowth : currentYtSubs;
@@ -86,24 +85,7 @@ export async function GET() {
 
   const ytScore = Math.min(100, ytScoreFromGrowth + ytGrowthBonus);
 
-  // ── 3. Trading P&L (20%) ──────────────────────────────────
-  const weekPolyPnl = parseFloat(process.env.POLY_WEEK_PNL || "0");
-  const weekHlPnl   = parseFloat(process.env.HL_WEEK_PNL   || "0");
-  const weekPnl     = weekPolyPnl + weekHlPnl;
-
-  const tradingScore = weekPnl >= 200  ? 100
-    : weekPnl >= 100  ? 90
-    : weekPnl >= 50   ? 80
-    : weekPnl >= 20   ? 72
-    : weekPnl >= 5    ? 63
-    : weekPnl >= 0    ? 52
-    : weekPnl >= -10  ? 42
-    : weekPnl >= -30  ? 32
-    : weekPnl >= -60  ? 22
-    : weekPnl >= -100 ? 12
-    : 5;
-
-  // ── 4. Content Output (25%) ───────────────────────────────
+  // ── 3. Content Output (35%) ───────────────────────────────
   const consistencyScore = weeklyPosts >= 7 ? 100
     : weeklyPosts >= 5 ? 88
     : weeklyPosts >= 3 ? 75
@@ -137,7 +119,6 @@ export async function GET() {
     inputs: {
       weeklyViews, weeklyPosts, bestTweetViews,
       currentYtSubs, ytSubsWeekAgo, ytGrowth, ytGrowthPct,
-      weekPnl, weekPolyPnl, weekHlPnl,
     },
     generatedAt: new Date().toISOString(),
   }, { headers: { "Cache-Control": "no-store" } });

@@ -18,7 +18,6 @@ function TabSkeleton() {
   );
 }
 
-const LongformTab = dynamic(() => import("@/app/longform/page"), { ssr: false, loading: () => <TabSkeleton /> });
 const OutlierFeed = dynamic(() => import("@/components/OutlierFeed"), { ssr: false, loading: () => <TabSkeleton /> });
 
 interface Idea {
@@ -72,7 +71,7 @@ export default function YouTubePage() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatedScript, setGeneratedScript] = useState<Script | null>(null);
   const [scripts, setScripts] = useState<Script[]>([]);
-  const [activeView, setActiveView] = useState<"longform" | "shorts" | "performance" | "outliers">("longform");
+  const [activeView, setActiveView] = useState<"shorts" | "performance" | "outliers">("shorts");
   const [shortsView, setShortsView] = useState<"ideas" | "scripts" | "tofilm" | "filmed">("ideas");
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [selectedIdeas, setSelectedIdeas] = useState<Set<string>>(new Set());
@@ -464,7 +463,6 @@ export default function YouTubePage() {
       {/* Main Tabs */}
       <div className="flex items-center gap-0 border-b border-[var(--line)] overflow-x-auto">
         {([
-          { key: "longform" as const, label: "📹 Long Form" },
           { key: "shorts" as const, label: "🎬 Shorts" },
           { key: "performance" as const, label: "📊 Performance" },
           { key: "outliers" as const, label: "🔥 Outliers" },
@@ -479,13 +477,6 @@ export default function YouTubePage() {
           </button>
         ))}
       </div>
-
-      {/* LONGFORM VIEW */}
-      {activeView === "longform" && (
-        <div className="[&>div]:min-h-0 [&>div]:pt-0 [&>div]:md\:pt-0 [&>div]:px-0 [&>div]:md\:px-0 [&>div]:p-0 [&>div]:md\:p-0">
-          <LongformTab />
-        </div>
-      )}
 
       {/* SHORTS SUB-NAV */}
       {activeView === "shorts" && (

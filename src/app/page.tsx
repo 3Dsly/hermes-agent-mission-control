@@ -8,10 +8,6 @@ import { HermesBriefing } from "@/components/hermes-briefing";
 import { ApprovalInbox } from "@/components/approval-inbox";
 
 // ── Types ─────────────────────────────────────────────────
-interface HLPosition {
-  asset: string; direction: string; unrealizedPnl: number;
-  unrealizedPnlPct: number; leverage: number; stopLoss?: number; takeProfit?: number;
-}
 interface Tweet { id: string; text: string; views: number; engRate: number; postedAt: string | null; tweetUrl: string | null }
 interface Video  { title: string; thumbnail: string; url: string; publishedAt: string }
 interface Draft  { id: string; text: string }
@@ -33,13 +29,10 @@ interface HomeData {
   topBuildIdeas: BuildIdea[];
   topVideo: Video | null; latestVideo: Video | null;
   ytSubscribers: number; ytGoal: number;
-  polyBalance: number; polyWinRate: number; polyTodayPnl: number; polyAllTimePnl: number;
-  hlBalance: number; hlPosition: HLPosition | null; hlTodayPnl: number; hlAllTimePnl: number;
-  allTimePnl: number; todayPnl: number;
   processes: Process[];
   hermesKanban: HermesKanban;
   xViewsTrend: number[];
-  snapshots: { d: string; xf: number; yt: number; pnl: number }[];
+  snapshots: { d: string; xf: number; yt: number }[];
 }
 
 const EMPTY: HomeData = {
@@ -48,9 +41,7 @@ const EMPTY: HomeData = {
   daysSincePost: 999, bestPostingDay: "—", bestPostingHourStr: "—",
   topSageDrafts: [], topYoutubeIdeas: [], topBuildIdeas: [],
   topVideo: null, latestVideo: null, ytSubscribers: 0, ytGoal: 20000,
-  polyBalance: 0, polyWinRate: 0, polyTodayPnl: 0, polyAllTimePnl: 0,
-  hlBalance: 0, hlPosition: null, hlTodayPnl: 0, hlAllTimePnl: 0,
-  allTimePnl: 0, todayPnl: 0, processes: [],
+  processes: [],
   hermesKanban: { board: "Hermes 24/7 Assistant", slug: "hermes-24-7-assistant", total: 0, counts: {}, tasks: [] },
   xViewsTrend: [], snapshots: [],
 };
@@ -117,8 +108,8 @@ function sampleSeries(current: number, n: number) {
     return Math.max(0, Math.round(current * ramp * wobble));
   });
 }
-type Snap = { d: string; xf: number; yt: number; pnl: number };
-function snapDelta(snaps: Snap[], key: "xf" | "yt" | "pnl") {
+type Snap = { d: string; xf: number; yt: number };
+function snapDelta(snaps: Snap[], key: "xf" | "yt") {
   const series = snaps.map(s => s[key]);
   if (snaps.length < 2) return { delta: null as number | null, deltaPct: null as number | null, label: undefined as string | undefined, series };
   const first = snaps[0][key];

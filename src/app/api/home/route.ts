@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const HL_WALLET = process.env.HL_WALLET || "";
-const HL_API = "https://api.hyperliquid.xyz/info";
 const YT_API_KEY = process.env.YOUTUBE_API_KEY;
 const YT_CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID || "";
 const HERMES_KANBAN_BOARD = process.env.HERMES_BOARD || "default";
@@ -78,17 +76,11 @@ function extractMetrics(raw: unknown) {
   return best;
 }
 
-async function hlPost(body: object) {
-  const res = await fetch(HL_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
-  return res.json();
-}
-
 export async function GET() {
   const [
     draftsResult,
     metricsResult,
     topPendingDraftsResult,
-    hlResult,
     ytTopResult,
     ytLatestResult,
     ytChannelResult,
@@ -99,11 +91,6 @@ export async function GET() {
     prisma.draft.findMany({ where: { status: "posted" }, orderBy: { postedAt: "desc" } }),
     prisma.tweetMetric.findMany(),
     prisma.draft.findMany({ where: { status: "pending" }, orderBy: { createdAt: "desc" }, take: 10 }),
-    Promise.all([
-      hlPost({ type: "clearinghouseState", user: HL_WALLET }),
-      hlPost({ type: "allMids" }),
-      hlPost({ type: "userFills", user: HL_WALLET }),
-    ]),
     fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YT_CHANNEL_ID}&maxResults=5&order=viewCount&type=video&key=${YT_API_KEY}`, { next: { revalidate: 3600 } }).then(r => r.json()),
     fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YT_CHANNEL_ID}&maxResults=3&order=date&type=video&key=${YT_API_KEY}`, { next: { revalidate: 3600 } }).then(r => r.json()),
     fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${YT_CHANNEL_ID}&key=${YT_API_KEY}`, { next: { revalidate: 3600 } }).then(r => r.json()),
@@ -279,60 +266,6 @@ export async function GET() {
     try { latestVideo = JSON.parse(process.env.YT_LATEST_VIDEO); } catch { /* ignore */ }
   }
 
-  // ─── P&L (env var fallbacks for Vercel) ────────────────────────────────────
-  let allTimePnl = parseFloat(process.env.POLY_ALL_TIME_PNL || process.env.ALL_TIME_PNL || "0");
-  let todayPnl = parseFloat(process.env.POLY_TODAY_PNL || "0");
-  let polyWinRate = parseFloat(process.env.POLY_WIN_RATE || "0");
-
-  // Try DataStore for richer PnL data
-  try {
-    const row = await prisma.dataStore.findUnique({ where: { key: "polymarket-pnl" } });
-    if (row?.data) {
-      const pnl = row.data as any;
-      if (pnl.allTimePnl) allTimePnl = pnl.allTimePnl;
-      if (pnl.todayPnl) todayPnl = pnl.todayPnl;
-      if (pnl.winRate) polyWinRate = pnl.winRate;
-    }
-  } catch {}
-
-  // ─── Hyperliquid ─────────────────────────────────────────────────────────────
-  let hlBalance = 0;
-  let hlPosition: { asset: string; direction: string; unrealizedPnl: number; unrealizedPnlPct: number; leverage: number; stopLoss?: number; takeProfit?: number } | null = null;
-
-  let hlTodayPnl = parseFloat(process.env.HL_TODAY_PNL || "0");
-  let hlAllTimePnl = parseFloat(process.env.HL_ALL_TIME_PNL || "0");
-
-  if (hlResult.status === "fulfilled") {
-    const [accountState, allMids, fills] = hlResult.value as [any, any, Array<{ time: number; closedPnl: string }>];
-    hlBalance = parseFloat(accountState.marginSummary?.accountValue || "0");
-    for (const p of accountState.assetPositions || []) {
-      const pos = p.position;
-      if (!pos || parseFloat(pos.szi) === 0) continue;
-      const size = parseFloat(pos.szi);
-      const markPx = parseFloat(allMids[pos.coin] || pos.entryPx || "0");
-      const unrealizedPnl = parseFloat(pos.unrealizedPnl || "0");
-      const leverage = parseFloat(pos.leverage?.value || pos.leverage || "1");
-      const notional = Math.abs(size) * markPx;
-      hlPosition = { asset: pos.coin, direction: size > 0 ? "long" : "short", unrealizedPnl, unrealizedPnlPct: notional > 0 ? (unrealizedPnl / (notional / leverage)) * 100 : 0, leverage };
-    }
-    if (Array.isArray(fills) && fills.length > 0) {
-      const cutoffMs = Date.now() - 24 * 60 * 60 * 1000;
-      hlTodayPnl = fills.filter(f => f.time > cutoffMs).reduce((s, f) => s + parseFloat(f.closedPnl || "0"), 0);
-      hlAllTimePnl = fills.reduce((s, f) => s + parseFloat(f.closedPnl || "0"), 0);
-    }
-    try {
-      const row = await prisma.battleRoyaleBot.findUnique({ where: { id: "claude-opus" } });
-      if (row?.state && hlPosition) {
-        const state = row.state as { current_position?: { stop_loss?: number; take_profit?: number } };
-        hlPosition.stopLoss = state.current_position?.stop_loss;
-        hlPosition.takeProfit = state.current_position?.take_profit;
-      }
-    } catch { /* ignore */ }
-  }
-
-  // ─── Polymarket balance (env var fallback) ──────────────────────────────────
-  let polyBalance = parseFloat(process.env.POLY_BALANCE || "0");
-
   // ─── PM2 Processes — not available on Vercel ───────────────────────────────
   const processes: { name: string; status: string; uptime: string }[] = [];
 
@@ -341,18 +274,16 @@ export async function GET() {
   // ─── Daily metric snapshots (rolling history for deltas + sparklines) ────────
   // Stored in the generic DataStore (no schema migration). Honest by design:
   // history starts accumulating today; deltas render once we have 2+ days.
-  type Snap = { d: string; xf: number; yt: number; pnl: number };
+  type Snap = { d: string; xf: number; yt: number };
   let snapshots: Snap[] = [];
   try {
     const snapRow = await prisma.dataStore.findUnique({ where: { key: "metric-snapshots" } });
     snapshots = Array.isArray(snapRow?.data) ? (snapRow!.data as Snap[]) : [];
     const today = new Date().toISOString().slice(0, 10);
-    const totalPnlNow = allTimePnl + hlAllTimePnl;
     const point: Snap = {
       d: today,
       xf: xStats.xFollowers,
       yt: ytSubscribers,
-      pnl: Math.round(totalPnlNow * 100) / 100,
     };
     const idx = snapshots.findIndex(s => s.d === today);
     if (idx >= 0) snapshots[idx] = point; else snapshots.push(point);
@@ -387,17 +318,6 @@ export async function GET() {
     latestVideo,
     ytSubscribers,
     ytGoal: 20000,
-    // Trading, hard-coded for dashboard/demo display
-    polyBalance,
-    polyWinRate,
-    polyTodayPnl: 67.22,
-    polyAllTimePnl: 67.22,
-    hlBalance,
-    hlTodayPnl: 0,
-    hlAllTimePnl: 0,
-    hlPosition: null,
-    allTimePnl: 67.22,
-    todayPnl: 67.22,
     // System
     processes,
     hermesKanban,

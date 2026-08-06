@@ -9,10 +9,7 @@ import {
   Play,
   Bot,
   Lightbulb,
-  Flower2,
-  FileText,
   ClipboardList,
-  HeartPulse,
   Cpu,
   BookOpen,
   Workflow,
@@ -34,14 +31,7 @@ const navGroups = [
     items: [
       { href: "/x", label: "X", icon: Twitter },
       { href: "/content-os", label: "Pipeline", icon: Workflow },
-      { href: "/articles", label: "Articles", icon: FileText },
       { href: "/youtube", label: "YouTube", icon: Play },
-    ],
-  },
-  {
-    name: "Data",
-    items: [
-      { href: "/client-pulse", label: "Client Pulse", icon: HeartPulse },
     ],
   },
   {
@@ -50,7 +40,6 @@ const navGroups = [
       { href: "/agents", label: "Agents", icon: Bot },
       { href: "/memory-wiki", label: "Memory Wiki", icon: BookOpen },
       { href: "/ideas", label: "Ideas", icon: Lightbulb },
-      { href: "/garden", label: "Garden", icon: Flower2 },
     ],
   },
 ];

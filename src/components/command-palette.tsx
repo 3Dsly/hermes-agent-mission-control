@@ -11,12 +11,9 @@ import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Twitter,
-  FileText,
   Youtube,
-  Activity,
   Bot,
   Lightbulb,
-  Sprout,
   ListChecks,
   Sparkles,
   CornerDownLeft,
@@ -34,12 +31,9 @@ interface NavItem {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "X", href: "/x", icon: Twitter },
-  { label: "Articles", href: "/articles", icon: FileText },
   { label: "YouTube", href: "/youtube", icon: Youtube },
-  { label: "Client Pulse", href: "/client-pulse", icon: Activity },
   { label: "Agents", href: "/agents", icon: Bot },
   { label: "Ideas", href: "/ideas", icon: Lightbulb },
-  { label: "Garden", href: "/garden", icon: Sprout },
   { label: "Tasks", href: "/tasks", icon: ListChecks },
   { label: "Hermes", href: "/hermes", icon: Sparkles },
 ];

@@ -29,9 +29,8 @@ function TabSkeleton() {
 
 const ContentTab = dynamic(() => import("@/app/x-content/page"), { ssr: false, loading: () => <TabSkeleton /> });
 const PerformanceTab = dynamic(() => import("@/app/x-analytics/page"), { ssr: false, loading: () => <TabSkeleton /> });
-const TrendRadarTab = dynamic(() => import("@/app/watchlist-radar/page"), { ssr: false, loading: () => <TabSkeleton /> });
 
-type Tab = "content" | "performance" | "radar";
+type Tab = "content" | "performance";
 
 export default function XPage() {
   const [tab, setTab] = useState<Tab>("content");
@@ -39,7 +38,6 @@ export default function XPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "content", label: "Content" },
     { key: "performance", label: "Performance" },
-    { key: "radar", label: "Trend Radar" },
   ];
 
   return (
@@ -68,7 +66,6 @@ export default function XPage() {
       <div className="[&>div]:min-h-0 [&>div]:pt-0 [&>div]:md\:pt-0 [&>div]:px-0 [&>div]:md\:px-0 [&>div]:p-0 [&>div]:md\:p-0 [&>div]:bg-transparent">
         {tab === "content" && <ContentTab />}
         {tab === "performance" && <PerformanceTab />}
-        {tab === "radar" && <TrendRadarTab />}
       </div>
     </div>
   );
